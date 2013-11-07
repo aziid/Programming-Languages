@@ -55,31 +55,18 @@ val longest_string3 = longest_string_helper (fn (x, y) => x > y)
 val longest_string4 = longest_string_helper (fn (x, y) => x >= y)
 
 (* 5 *)
-val longest_capitalized =
-    (longest_string_helper (fn (x, y) => x > y)) o
-    (List.filter (fn str => Char.isUpper(String.sub(str, 0))))
+val longest_capitalized = longest_string1 o only_capitals
 
 (* 6 *)
 val rev_string = String.implode o rev o String.explode
 
 (* 7 *)
 fun first_answer f lst =
-    case List.find (fn x => case f x of SOME i => true | NONE => false) lst of
-        SOME v => valOf(f v)
-      | NONE => raise NoAnswer
-(* another version for 7
-fun first_answer f lst =
-    let fun aux(l, acc) =
-            case l of
-                [] => acc
-              | head::tail => case f head of
-                                  NONE => aux(tail, acc)
-                                | SOME v => aux([], v::acc)
-    in case aux(lst, []) of
-           [] => raise NoAnswer
-         | head::_ => head
-    end
- *)
+    case lst of
+         [] => raise NoAnswer
+       | head::tail => case f head of
+                            NONE => first_answer f tail
+                          | SOME v => v
 
 (* 8 *)
 fun all_answers f lst =
@@ -87,16 +74,16 @@ fun all_answers f lst =
             case l of
                 [] => SOME acc
               | head::tail => case f head of
-                                  NONE => raise NoAnswer
+                                  NONE => NONE
                                 | SOME v => aux(tail, acc @ v)
     in
-        aux(lst, []) handle NoAnswer => NONE
+        aux(lst, [])
     end
 
 (* 9-a *)
 val count_wildcards = g (fn () => 1) (fn str => 0)
 (* 9-b *)
-val count_wild_and_variable_lengths = g (fn () => 1) (fn str => String.size str)
+val count_wild_and_variable_lengths = g (fn () => 1) String.size
 (* 9-c *)
 fun count_some_var (str, ptn) =
     g (fn () => 0) (fn s => if s = str then 1 else 0) ptn
@@ -112,8 +99,7 @@ fun check_pat pat =
         fun is_uniq lst =
             case lst of
                 [] => true
-              | head::[] => true
-              | head::tail => (List.exists (fn str => str <> head) tail)
+              | head::tail => (not (List.exists (fn str => str = head) tail))
                               andalso (is_uniq tail)
     in
         is_uniq(all_vars pat)
@@ -169,12 +155,7 @@ fun get_lenient (t1, t2) =
            | (Anything, _) => t2
            | (TupleT ps1, TupleT ps2) =>
              if List.length ps1 = List.length ps2
-             then
-                 case all_answers (fn x => SOME [get_lenient x]
-                                           handle NoAnswer => NONE)
-                                  (ListPair.zip(ps1, ps2)) of
-                     NONE => raise NoAnswer
-                   | SOME l => TupleT l
+             then TupleT(List.map get_lenient (ListPair.zip(ps1, ps2)))
              else raise NoAnswer
            | (_, _) => raise NoAnswer
 
@@ -182,13 +163,11 @@ fun get_lenient (t1, t2) =
 if any of them is NONE return NONE, otherwise get the most lenient typ
 from all the typs. If no such typ, return NONE. *)
 fun typecheck_patterns (lst, ps) =
-    let val typs = all_answers (fn x => SOME [pattern_to_type(lst, x)]
-                                         handle NoAnswer => NONE) ps
+    let val typs = List.map (fn x => pattern_to_type(lst, x)) ps
+                   handle NoAnswer => []
     in
         case typs of
-            NONE => NONE
-          | SOME tlst => if tlst = []
-                         then NONE
-                         else SOME (List.foldl get_lenient Anything tlst)
-                              handle NoAnswer => NONE
+            [] => NONE
+          | head::tail => SOME (List.foldl get_lenient head tail)
+                          handle NoAnswer => NONE
     end
