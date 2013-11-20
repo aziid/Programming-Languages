@@ -47,9 +47,9 @@
 ;; () -> Stream
 ;; produce a stream thats alternates between "dan.jpg" and "dog.jpg"
 (define dan-then-dog
-  (letrec ([alt (lambda (x) (if (zero? (remainder x 2)) "dan.jpg" "dog.jpg"))] 
-           [f (lambda (x) (cons (alt x) (lambda () (f (+ x 1)))))])
-    (lambda () (f 0))))
+  (letrec ([dan (lambda () (cons "dan.jpg" dog))] 
+           [dog (lambda () (cons "dog.jpg" dan))])
+    dan))
 
 ;; 7
 ;; Stream -> Stream
@@ -87,20 +87,15 @@
 ;; produce a function that behaves like assoc with a cahe of n elements
 (define (cached-assoc xs n)
   (letrec ([memo (make-vector n #f)]
-           [pos 0]
-           [f (lambda (v)
-                (let ([ans (vector-assoc v memo)])
-                  (if ans
-                      ans
-                      (let ([new-ans (assoc v xs)])
-                        (if new-ans
-                            (begin
-                              (vector-set! memo pos new-ans)
-                              (set! pos (remainder (+ pos 1) n))
-                              (print memo)
-                              new-ans)
-                            #f)))))])
-    f))
+           [pos 0])
+    (lambda (v)
+      (or (vector-assoc v memo)
+          (let ([new-ans (assoc v xs)])
+            (and new-ans
+                 (begin
+                   (vector-set! memo pos new-ans)
+                   (set! pos (remainder (+ pos 1) n))
+                   new-ans)))))))
 
 ;; 11
 ;; () -> Macro
