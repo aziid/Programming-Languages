@@ -8,6 +8,7 @@ Programming Languages Assignments
 | 4            | Racket       | `PWCP`       | 105/105   | 11-03-2013  |
 | 5            | Racket       | `PASS`       | 100/105   | 11-11-2013  |
 | 6            | Ruby         | `PASS`       | 100/100   | 11-17-2013  |
+| 7            | ML/Ruby      | `PASS`       | 100/100   | 11-24-2013  |
 
 <small>`PWCP` -> Passed With Challenge Problems. Additional score obtained by solving challenge problems</small>
 
