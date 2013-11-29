@@ -68,27 +68,27 @@
                (if (> (int-num v1) (int-num v2))
                    (eval-under-env (ifgreater-e3 e) env)
                    (eval-under-env (ifgreater-e4 e) env))
-               (error "MUPL comparsion applied to non-number")))]
+               (error "MUPL ifgreater applied to non-number")))]
         [(mlet? e)
-         (letrec ([v (eval-under-env (mlet-e e) env)]
-                  [ex-env (cons (cons (mlet-var e) v) env)])
-           (eval-under-env (mlet-body e) ex-env))]
+         (let* ([v (eval-under-env (mlet-e e) env)]
+                [new-env (cons (cons (mlet-var e) v) env)])
+           (eval-under-env (mlet-body e) new-env))]
         [(call? e)
-         (letrec ([clo (eval-under-env (call-funexp e) env)]
-                  [arg (eval-under-env (call-actual e) env)])
+         (let ([clo (eval-under-env (call-funexp e) env)]
+               [arg (eval-under-env (call-actual e) env)])
            (if (closure? clo)
-               (letrec ([clo-fun (closure-fun clo)]
-                        [clo-fun-name (fun-nameopt clo-fun)]
-                        [name-map (cons clo-fun-name clo)]
-                        [arg-map (cons (fun-formal clo-fun) arg)]
-                        [clo-env (closure-env clo)]
-                        [ex-env (cons arg-map (cons name-map clo-env))])
-                 (eval-under-env (fun-body clo-fun) ex-env))
+               (let* ([clo-fun (closure-fun clo)]
+                      [new-env (cons (cons (fun-formal clo-fun) arg)
+                                     (closure-env clo))]
+                      [new-env (if (fun-nameopt clo-fun)
+                                   (cons (cons (fun-nameopt clo-fun) clo)
+                                         new-env)
+                                   new-env)])
+                 (eval-under-env (fun-body clo-fun) new-env))
                (error "MUPL call applied to non-closure")))]
         [(apair? e)
-         (let ([v1 (eval-under-env (apair-e1 e) env)]
-               [v2 (eval-under-env (apair-e2 e) env)])
-           (apair v1 v2))]
+         (apair (eval-under-env (apair-e1 e) env)
+                (eval-under-env (apair-e2 e) env))]
         [(fst? e)
          (let ([v (eval-under-env (fst-e e) env)])
            (if (apair? v)
@@ -101,15 +101,13 @@
                (error "MUPL snd applied to non-apair")))]
         [(isaunit? e)
          (let ([v (eval-under-env (isaunit-e e) env)])
-           (if (aunit? v)
-               (int 1)
-               (int 0)))]
+           (if (aunit? v) (int 1) (int 0)))]
         [#t (error (format "bad MUPL expression: ~v" e))]))
 
 ;; Do NOT change
 (define (eval-exp e)
   (eval-under-env e null))
-        
+
 ;; Problem 3
 
 (define (ifaunit e1 e2 e3) (ifgreater (isaunit e1) (int 0) e2 e3))
@@ -123,7 +121,8 @@
 
 (define (ifeq e1 e2 e3 e4)
   (mlet* (list (cons "_x" e1) (cons "_y" e2))
-         (ifgreater (var "_x") (var "_y") e4
+         (ifgreater (var "_x") (var "_y")
+                    e4
                     (ifgreater (var "_y") (var "_x") e4 e3))))
 
 ;; Problem 4
@@ -135,7 +134,7 @@
                      (aunit)
                      (apair (call (var "map-fun") (fst (var "map-lst")))
                             (call (call (var "mupl-map") (var "map-fun"))
-                                        (snd (var "map-lst")))))))) 
+                                  (snd (var "map-lst")))))))) 
 
 (define mupl-mapAddN 
   (mlet "map" mupl-map
