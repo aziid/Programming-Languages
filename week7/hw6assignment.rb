@@ -11,8 +11,8 @@ class MyPiece < Piece
                    rotations([[0, 0], [0, -1], [1, -1]])] + All_Pieces
   Cheat_Piece = [[[0, 0]]]
 
-  def self.next_piece (board, cheat=false)
-    if cheat
+  def self.next_piece (board)
+    if board.cheat
       MyPiece.new(Cheat_Piece, board)
     else
       MyPiece.new(All_My_Pieces.sample, board)
@@ -23,7 +23,7 @@ end
 
 class MyBoard < Board
 
-  attr_accessor :cheat, :score
+  attr_reader :cheat
 
   def initialize (game)
     super
@@ -39,7 +39,7 @@ class MyBoard < Board
   end
 
   def next_piece
-    @current_block = MyPiece.next_piece(self, @cheat)
+    @current_block = MyPiece.next_piece(self)
     @cheat = false
     @current_pos = nil
   end
@@ -48,13 +48,21 @@ class MyBoard < Board
     locations = @current_block.current_rotation
     displacement = @current_block.position
     (0..(locations.size - 1)).each{|index|
-      current = locations[index];
+      current = locations[index]
       @grid[current[1]+displacement[1]][current[0]+displacement[0]] =
           @current_pos[index]
     }
     remove_filled
     @delay = [@delay - 2, 80].max
   end
+
+  def cheat_next
+    if @score > 180 and !@cheat
+      @score -= 100
+      @cheat = true
+    end
+  end
+
 end
 
 class MyTetris < Tetris
@@ -70,10 +78,7 @@ class MyTetris < Tetris
   def key_bindings
     super
     @root.bind('u', proc {@board.rotate_180})
-    @root.bind('c', proc {if @board.score >= 100 and !@board.cheat
-                            @board.cheat = true
-                            @board.score -= 100
-                          end})
+    @root.bind('c', proc {@board.cheat_next})
   end
 
 end
